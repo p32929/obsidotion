@@ -22,6 +22,8 @@ If you like my works and want to support me/my works, feel free to support:
 
 [![buymeacoffee](https://www.buymeacoffee.com/assets/img/guidelines/download-assets-sm-1.svg)](https://www.buymeacoffee.com/p32929)
 
+# Contribution
+If you want to contribute to this project, please open an issue first and explain how you'd like to contribute
 
 # License
 ```
