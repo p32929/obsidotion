@@ -56,7 +56,7 @@ export default class ObsidianSyncNotionPlugin extends Plugin {
 			ribbon.appendChild(downloadRibbonIconEl);
 		}
 
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+		this.addSettingTab(new SettingTab(this.app, this));
 	}
 
 	onunload() { }
@@ -108,7 +108,7 @@ export default class ObsidianSyncNotionPlugin extends Plugin {
 	}
 }
 
-class SampleSettingTab extends PluginSettingTab {
+class SettingTab extends PluginSettingTab {
 	plugin: ObsidianSyncNotionPlugin;
 
 	constructor(app: App, plugin: ObsidianSyncNotionPlugin) {
