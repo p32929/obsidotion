@@ -1,6 +1,7 @@
 import { Notice, requestUrl, TFile, Vault, normalizePath } from 'obsidian';
 import * as yaml from 'yaml';
 import ObsidianSyncNotionPlugin from './main';
+import markdownTable from 'markdown-table';
 
 export class DownloadFromNotion {
   plugin: ObsidianSyncNotionPlugin;
@@ -32,14 +33,12 @@ export class DownloadFromNotion {
     const titleProperty = properties.Name;
 
     if (!titleProperty || !titleProperty.title || !titleProperty.title.length || !titleProperty.title[0].text) {
-      // new Notice(`Page ${page.id} does not have a valid title. Skipping...`);
       return;
     }
 
     const fullTitle = titleProperty.title[0].text.content;
     const separatorIndex = fullTitle.lastIndexOf(':');
     if (separatorIndex === -1) {
-      // new Notice(`Invalid title format: ${fullTitle}. Skipping...`);
       return;
     }
 
@@ -58,7 +57,7 @@ export class DownloadFromNotion {
     const blocks = blocksResponse.json.results;
     console.log('Fetched blocks:', blocks);  // Debugging
 
-    const markdown = this.blocksToMarkdown(blocks);
+    const markdown = await this.blocksToMarkdown(blocks);
     console.log('Converted markdown:', markdown);  // Debugging
 
     const normalizedFilePath = normalizePath(filePath);
@@ -86,27 +85,88 @@ export class DownloadFromNotion {
     }
   }
 
-  blocksToMarkdown(blocks: any[]): string {
-    return blocks.map(block => this.blockToMarkdown(block)).join('\n');
+  async blocksToMarkdown(blocks: any[], indentLevel: number = 0, numbering: number[] = []): Promise<string> {
+    let markdown = '';
+    for (const block of blocks) {
+      markdown += await this.blockToMarkdown(block, indentLevel, numbering);
+    }
+    return markdown;
   }
 
-  blockToMarkdown(block: any): string {
+  async blockToMarkdown(block: any, indentLevel: number = 0, numbering: number[] = []): Promise<string> {
+    const indent = '    '.repeat(indentLevel);
+    let markdown = '';
+    const nextIndentLevel = indentLevel + 1;
+
     switch (block.type) {
       case 'paragraph':
-        return block.paragraph?.rich_text?.map((text: any) => text.text.content).join('') || '';
+        markdown += indent + (block.paragraph?.rich_text?.map((text: any) => text.text.content).join('') || '') + '\n';
+        break;
       case 'heading_1':
-        return `# ${block.heading_1?.rich_text?.map((text: any) => text.text.content).join('') || ''}`;
+        markdown += `# ${block.heading_1?.rich_text?.map((text: any) => text.text.content).join('') || ''}\n`;
+        break;
       case 'heading_2':
-        return `## ${block.heading_2?.rich_text?.map((text: any) => text.text.content).join('') || ''}`;
+        markdown += `## ${block.heading_2?.rich_text?.map((text: any) => text.text.content).join('') || ''}\n`;
+        break;
       case 'heading_3':
-        return `### ${block.heading_3?.rich_text?.map((text: any) => text.text.content).join('') || ''}`;
+        markdown += `### ${block.heading_3?.rich_text?.map((text: any) => text.text.content).join('') || ''}\n`;
+        break;
       case 'bulleted_list_item':
-        return `- ${block.bulleted_list_item?.rich_text?.map((text: any) => text.text.content).join('') || ''}`;
+        markdown += `${indent}- ${block.bulleted_list_item?.rich_text?.map((text: any) => text.text.content).join('') || ''}\n`;
+        if (block.has_children) {
+          const childBlocks = await this.getBlockChildren(block.id);
+          markdown += await this.blocksToMarkdown(childBlocks, nextIndentLevel, numbering);
+        }
+        break;
       case 'numbered_list_item':
-        return `1. ${block.numbered_list_item?.rich_text?.map((text: any) => text.text.content).join('') || ''}`;
+        const currentNumber = numbering[indentLevel] || 1;
+        markdown += `${indent}${currentNumber}. ${block.numbered_list_item?.rich_text?.map((text: any) => text.text.content).join('') || ''}\n`;
+        numbering[indentLevel] = currentNumber + 1;
+        if (block.has_children) {
+          const childBlocks = await this.getBlockChildren(block.id);
+          markdown += await this.blocksToMarkdown(childBlocks, nextIndentLevel, numbering);
+        }
+        break;
+      case 'table':
+        markdown += this.convertTable(block) + '\n';
+        break;
       default:
         console.log('Unhandled block type:', block.type, block);  // Debugging
-        return '';
     }
+
+    return markdown;
+  }
+
+  async getBlockChildren(blockId: string): Promise<any[]> {
+    let allChildren: any[] = [];
+    let cursor: string | undefined = undefined;
+
+    do {
+      const response = await requestUrl({
+        url: `https://api.notion.com/v1/blocks/${blockId}/children?page_size=100${cursor ? `&start_cursor=${cursor}` : ''}`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.plugin.settings.notionAPI}`,
+          'Notion-Version': '2022-06-28',
+        },
+      });
+
+      const data = response.json;
+      allChildren = allChildren.concat(data.results);
+      cursor = data.next_cursor ?? undefined;
+    } while (cursor);
+
+    return allChildren;
+  }
+
+  convertTable(block: any): string {
+    if (!block.table || !block.table.table_width || !block.table.rows) {
+      return '';
+    }
+
+    const headers = block.table.has_column_header ? block.table.rows[0].cells.map((cell: any) => cell.map((text: any) => text.text.content).join('')) : [];
+    const rows = block.table.has_column_header ? block.table.rows.slice(1).map((row: any) => row.cells.map((cell: any) => cell.map((text: any) => text.text.content).join(''))) : block.table.rows.map((row: any) => row.cells.map((cell: any) => cell.map((text: any) => text.text.content).join('')));
+
+    return markdownTable([headers, ...rows]);
   }
 }
