@@ -1,6 +1,6 @@
 {
 	"name": "obsidotion",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "a simple obsidian plugin that syncs from/to obsidian/notion",
 	"main": "main.js",
 	"scripts": {
