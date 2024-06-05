@@ -1,7 +1,5 @@
-import { Notice, requestUrl, TFile } from 'obsidian';
+import { Notice, requestUrl, TFile, stringifyYaml } from 'obsidian';
 import { markdownToBlocks } from '@tryfabric/martian';
-import * as yamlFrontMatter from 'yaml-front-matter';
-import * as yaml from 'yaml';
 import ObsidianSyncNotionPlugin from './main';
 
 export class Upload2Notion {
@@ -13,19 +11,17 @@ export class Upload2Notion {
 
   async syncMarkdownToNotion(file: TFile, allowTags: boolean) {
     const markdown = await this.plugin.app.vault.read(file);
-    const yamlObj = yamlFrontMatter.loadFront(markdown);
-    const content = yamlObj.__content;
+    const frontmatter = this.plugin.app.metadataCache.getFileCache(file)?.frontmatter;
+    const content = markdown.split('---')[2] || '';
     const blocks = markdownToBlocks(content);
 
-    const frontmatter = await this.plugin.app.metadataCache.getFileCache(file)?.frontmatter;
     const notionID = frontmatter?.notionID;
-
     const filePath = file.path;
 
     if (notionID) {
-      await this.updatePage(notionID, file.basename, allowTags, yamlObj.tags, blocks, filePath);
+      await this.updatePage(notionID, file.basename, allowTags, frontmatter?.tags, blocks, filePath);
     } else {
-      await this.createPage(file.basename, allowTags, yamlObj.tags, blocks, file, markdown, filePath);
+      await this.createPage(file.basename, allowTags, frontmatter?.tags, blocks, file, markdown, filePath);
     }
   }
 
@@ -143,13 +139,12 @@ export class Upload2Notion {
 
   async updateYamlInfo(notionID: string, url: string, file: TFile, filePath: string) {
     const markdown = await this.plugin.app.vault.read(file);
-    const yamlObj = yamlFrontMatter.loadFront(markdown) as any;
-    yamlObj.notionID = notionID;
-    yamlObj.link = url;
-    yamlObj.filePath = filePath; // Include the file path in the YAML frontmatter
-    const newContent = yamlObj.__content;
-    delete yamlObj.__content;
-    const yamlHead = yaml.stringify(yamlObj).trim();
+    const frontmatter = this.plugin.app.metadataCache.getFileCache(file)?.frontmatter || {};
+    frontmatter.notionID = notionID;
+    frontmatter.link = url;
+    frontmatter.filePath = filePath;
+    const newContent = markdown.split('---')[2] || '';
+    const yamlHead = stringifyYaml(frontmatter).trim();
     const content = `---\n${yamlHead}\n---\n${newContent}`;
     await this.plugin.app.vault.modify(file, content);
   }

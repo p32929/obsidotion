@@ -26,6 +26,10 @@ After that you can:
 6. Open obsidian
 7. Enable the plugin
 
+# Not supported tags ( tested so far )
+1. table
+2. nested bullet/numbered points
+
 # Share
 Sharing this repository with your friends is just one click away from here
 

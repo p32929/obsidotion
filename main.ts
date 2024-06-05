@@ -1,5 +1,5 @@
-// 
-console.log = function () { };
+//
+// console.log = function () { };
 
 // 
 import {
@@ -48,13 +48,6 @@ export default class ObsidianSyncNotionPlugin extends Plugin {
 			await this.downloadAllNotes();
 			this.closeSyncModal();
 		});
-
-		// Position ribbon buttons at the bottom
-		const ribbon = document.querySelector('.side-dock-ribbon');
-		if (ribbon && uploadRibbonIconEl && downloadRibbonIconEl) {
-			ribbon.appendChild(uploadRibbonIconEl);
-			ribbon.appendChild(downloadRibbonIconEl);
-		}
 
 		this.addSettingTab(new SettingTab(this.app, this));
 	}
@@ -120,13 +113,12 @@ class SettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-		containerEl.createEl('h2', { text: 'Settings for Obsidian to Notion plugin.' });
 
 		new Setting(containerEl)
-			.setName('Notion API Token')
-			.setDesc('Enter your Notion API Token')
+			.setName('Notion API token')
+			.setDesc('Enter your Notion API token')
 			.addText(text => text
-				.setPlaceholder('Enter your Notion API Token')
+				.setPlaceholder('Enter your Notion API token')
 				.setValue(this.plugin.settings.notionAPI)
 				.onChange(async (value) => {
 					this.plugin.settings.notionAPI = value;
@@ -135,9 +127,9 @@ class SettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Database ID')
-			.setDesc('Enter your Database ID')
+			.setDesc('Enter your database ID')
 			.addText(text => text
-				.setPlaceholder('Enter your Database ID')
+				.setPlaceholder('Enter your database ID')
 				.setValue(this.plugin.settings.databaseID)
 				.onChange(async (value) => {
 					this.plugin.settings.databaseID = value;
@@ -145,7 +137,7 @@ class SettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Convert Tags')
+			.setName('Convert tags')
 			.setDesc('Transfer the Obsidian tags to the Notion table.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.allowTags)

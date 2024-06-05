@@ -1,5 +1,4 @@
-import { Notice, requestUrl, TFile, Vault, normalizePath } from 'obsidian';
-import * as yaml from 'yaml';
+import { Notice, requestUrl, TFile, Vault, normalizePath, stringifyYaml } from 'obsidian';
 import ObsidianSyncNotionPlugin from './main';
 import markdownTable from 'markdown-table';
 
@@ -55,10 +54,8 @@ export class DownloadFromNotion {
     });
 
     const blocks = blocksResponse.json.results;
-    console.log('Fetched blocks:', blocks);  // Debugging
 
     const markdown = await this.blocksToMarkdown(blocks);
-    console.log('Converted markdown:', markdown);  // Debugging
 
     const normalizedFilePath = normalizePath(filePath);
     const dirPath = normalizedFilePath.substring(0, normalizedFilePath.lastIndexOf('/'));
@@ -74,7 +71,7 @@ export class DownloadFromNotion {
       link: `https://www.notion.so/${page.id.replace(/-/g, '')}`,
       ...(properties.Tags && properties.Tags.multi_select ? { tags: properties.Tags.multi_select.map((tag: any) => tag.name) } : {})
     };
-    const yamlContent = `---\n${yaml.stringify(frontmatter)}\n---\n${markdown}`;
+    const yamlContent = `---\n${stringifyYaml(frontmatter)}\n---\n${markdown}`;
 
     if (existingFile && existingFile instanceof TFile) {
       await this.plugin.app.vault.modify(existingFile, yamlContent);
@@ -131,7 +128,7 @@ export class DownloadFromNotion {
         markdown += this.convertTable(block) + '\n';
         break;
       default:
-        console.log('Unhandled block type:', block.type, block);  // Debugging
+        console.log('Unhandled block type:', block.type, block);
     }
 
     return markdown;
