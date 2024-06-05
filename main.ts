@@ -37,13 +37,13 @@ export default class ObsidianSyncNotionPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		const uploadRibbonIconEl = this.addRibbonIcon('upload-cloud', 'Upload to Notion', async () => {
+		this.addRibbonIcon('upload-cloud', 'Upload to Notion', async () => {
 			this.showSyncModal();
 			await this.uploadAllNotes();
 			this.closeSyncModal();
 		});
 
-		const downloadRibbonIconEl = this.addRibbonIcon('download-cloud', 'Download from Notion', async () => {
+		this.addRibbonIcon('download-cloud', 'Download from Notion', async () => {
 			this.showSyncModal();
 			await this.downloadAllNotes();
 			this.closeSyncModal();
