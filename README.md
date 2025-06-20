@@ -26,9 +26,17 @@ After that you can:
 6. Open obsidian
 7. Enable the plugin
 
-# Not supported tags ( tested so far )
-1. table
-2. nested bullet/numbered points
+## For developers who dont want to copy files manually every time
+
+You can create a `.env` file to auto-copy the built files to your obsidian vault. This way you dont have to manually copy `main.js`, `manifest.json`, `styles.css` every time you build.
+
+Create a `.env` file:
+```
+OBSIDIAN_VAULT_PATH=/path/to/your/obsidian/vault/.obsidian/plugins
+PLUGIN_ID=obsidotion
+```
+
+If you dont provide the `.env` file, the build will still work fine. You'll just have to copy the files manually
 
 # Share
 Sharing this repository with your friends is just one click away from here
