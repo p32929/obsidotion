@@ -51,7 +51,7 @@ export default class ObsidotionPlugin extends Plugin {
 		this.addSettingTab(new ObsidotionSettingTab(this.app, this));
 
 		// Add ribbon button for uploading to Notion
-		this.addRibbonIcon('upload', 'Upload to Notion', async (evt: MouseEvent) => {
+		this.addRibbonIcon('cloud-upload', 'Upload to Notion', async (evt: MouseEvent) => {
 			if (!this.settings.notionAPIToken || !this.settings.databaseID) {
 				new Notice('Please configure API token and database ID in settings first');
 				return;
@@ -68,7 +68,7 @@ export default class ObsidotionPlugin extends Plugin {
 		});
 
 		// Add ribbon button for pulling from Notion
-		this.addRibbonIcon('download', 'Pull from Notion', async (evt: MouseEvent) => {
+		this.addRibbonIcon('cloud-download', 'Pull from Notion', async (evt: MouseEvent) => {
 			if (!this.settings.notionAPIToken || !this.settings.databaseID) {
 				new Notice('Please configure API token and database ID in settings first');
 				return;
