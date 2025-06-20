@@ -1,0 +1,434 @@
+/* Obsidotion Plugin Styles */
+
+.obsidotion-spinner {
+	display: inline-block;
+	animation: spin 1s linear infinite;
+	font-size: 1.5em;
+	margin: 10px;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.obsidotion-status {
+	margin: 20px 0;
+	padding: 15px;
+	border-radius: 6px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.obsidotion-status-valid {
+	color: var(--text-success);
+	background-color: var(--background-modifier-success);
+}
+
+.obsidotion-status-invalid {
+	color: var(--text-error);
+	background-color: var(--background-modifier-error);
+}
+
+.obsidotion-status ul {
+	margin: 10px 0 0 20px;
+}
+
+.obsidotion-status li {
+	margin: 5px 0;
+}
+
+/* Debug mode indicators */
+.obsidotion-debug-notice {
+	border-left: 3px solid var(--accent-h);
+	padding-left: 10px;
+}
+
+/* Sync progress modal */
+.sync-modal .modal-content {
+	text-align: center;
+	padding: 20px;
+}
+
+.sync-modal .modal-title {
+	color: var(--text-accent);
+	margin-bottom: 15px;
+}
+
+/* Settings improvements */
+.setting-item-description {
+	opacity: 0.7;
+	font-size: 0.9em;
+}
+
+/* Conflict resolution modal styles */
+.conflict-buttons {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-top: 20px;
+}
+
+.conflict-buttons button {
+	flex: 1;
+	min-width: 120px;
+	padding: 10px 15px;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.conflict-buttons button:first-child {
+	background-color: #4CAF50;
+	color: white;
+}
+
+.conflict-buttons button:nth-child(2) {
+	background-color: #2196F3;
+	color: white;
+}
+
+.conflict-buttons button:nth-child(3) {
+	background-color: #FF9800;
+	color: white;
+}
+
+.conflict-buttons button:last-child {
+	background-color: #f44336;
+	color: white;
+}
+
+.conflict-buttons button:hover {
+	opacity: 0.8;
+	transform: translateY(-1px);
+}
+
+/* Diff modal styles */
+.diff-container {
+	display: flex;
+	gap: 20px;
+	margin: 20px 0;
+	max-height: 400px;
+	overflow: hidden;
+}
+
+.diff-panel {
+	flex: 1;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 5px;
+	overflow: hidden;
+}
+
+.diff-panel h3 {
+	margin: 0;
+	padding: 10px;
+	background-color: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.diff-panel pre {
+	margin: 0;
+	padding: 15px;
+	overflow: auto;
+	max-height: 350px;
+	font-size: 12px;
+	line-height: 1.4;
+	background-color: var(--background-primary);
+}
+
+/* Delete confirmation modal styles */
+.delete-buttons {
+	display: flex;
+	gap: 15px;
+	margin-top: 20px;
+}
+
+.delete-buttons button {
+	flex: 1;
+	padding: 12px 20px;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.delete-buttons button:first-child {
+	background-color: #f44336;
+	color: white;
+}
+
+.delete-buttons button:last-child {
+	background-color: var(--interactive-accent);
+	color: white;
+}
+
+.delete-buttons button:hover {
+	opacity: 0.8;
+	transform: translateY(-1px);
+}
+
+/* Page deleted modal styles */
+.page-deleted-buttons {
+	display: flex;
+	gap: 15px;
+	margin-top: 20px;
+}
+
+.page-deleted-buttons button {
+	flex: 1;
+	padding: 12px 20px;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.page-deleted-buttons button:first-child {
+	background-color: var(--interactive-accent);
+	color: white;
+}
+
+.page-deleted-buttons button:last-child {
+	background-color: #757575;
+	color: white;
+}
+
+.page-deleted-buttons button:hover {
+	opacity: 0.8;
+	transform: translateY(-1px);
+}
+
+/* Status Bar Animations */
+.spinning-icon {
+	animation: spin 1s linear infinite;
+}
+
+.notion-sync-status {
+	cursor: pointer;
+	transition: opacity 0.2s ease;
+}
+
+.notion-sync-status:hover {
+	opacity: 0.7;
+}
+
+/* Sync Status Modal */
+.sync-status-modal .modal-content {
+	padding: 0;
+	max-width: 600px;
+	max-height: 500px;
+	background: var(--background-primary);
+}
+
+.sync-status-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 20px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.sync-status-icon {
+	font-size: 20px;
+}
+
+.sync-status-icon.spinning {
+	animation: spin 1s linear infinite;
+}
+
+.sync-status-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.sync-operations-container {
+	padding: 15px;
+	max-height: 300px;
+	overflow-y: auto;
+}
+
+/* Empty State */
+.sync-empty-state {
+	text-align: center;
+	padding: 40px 20px;
+	color: var(--text-muted);
+}
+
+.sync-empty-icon {
+	font-size: 32px;
+	margin-bottom: 10px;
+}
+
+.sync-empty-text {
+	font-size: 16px;
+	font-weight: 500;
+	margin-bottom: 5px;
+}
+
+.sync-empty-subtext {
+	font-size: 14px;
+	opacity: 0.7;
+}
+
+/* Operation Items */
+.sync-operation-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 0;
+	border-bottom: 1px solid var(--background-modifier-border-hover);
+	animation: slideInFromRight 0.3s ease-out;
+}
+
+.sync-operation-item:last-child {
+	border-bottom: none;
+}
+
+.sync-operation-processing {
+	background: linear-gradient(90deg, transparent, var(--background-modifier-hover), transparent);
+	background-size: 200% 100%;
+	animation: shimmer 1.5s infinite ease-in-out;
+}
+
+@keyframes slideInFromRight {
+	from {
+		opacity: 0;
+		transform: translateX(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+@keyframes shimmer {
+	0% { background-position: 200% 0; }
+	100% { background-position: -200% 0; }
+}
+
+.sync-operation-status {
+	font-size: 16px;
+	min-width: 20px;
+}
+
+.sync-operation-status.spinning {
+	animation: spin 1s linear infinite;
+}
+
+.sync-status-pending {
+	opacity: 0.7;
+}
+
+.sync-status-processing {
+	color: var(--text-accent);
+}
+
+.sync-status-completed {
+	color: var(--text-success);
+}
+
+.sync-status-failed {
+	color: var(--text-error);
+}
+
+.sync-operation-name {
+	flex: 1;
+	font-size: 14px;
+	color: var(--text-normal);
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.sync-operation-type {
+	font-size: 10px;
+	font-weight: 600;
+	padding: 2px 6px;
+	border-radius: 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.sync-type-upload {
+	background: #4CAF50;
+	color: white;
+}
+
+.sync-type-download {
+	background: #2196F3;
+	color: white;
+}
+
+.sync-type-delete {
+	background: #f44336;
+	color: white;
+}
+
+.sync-operation-error {
+	margin-top: 4px;
+	padding: 4px 8px;
+	background: var(--background-modifier-error);
+	border-radius: 4px;
+	font-size: 12px;
+	color: var(--text-error);
+	word-break: break-word;
+}
+
+/* Footer Progress */
+.sync-status-footer {
+	padding: 15px 20px;
+	border-top: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+
+.sync-progress-container {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.sync-progress-bar {
+	height: 6px;
+	background: var(--background-modifier-border);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.sync-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	border-radius: 3px;
+	transition: width 0.3s ease;
+}
+
+.sync-progress-fill.sync-progress-error {
+	background: #f44336;
+}
+
+.sync-progress-stats {
+	font-size: 12px;
+	color: var(--text-muted);
+	text-align: center;
+}
+
+.sync-close-button {
+	margin-top: 10px;
+	padding: 8px 16px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 14px;
+	width: 100%;
+	transition: background 0.2s ease;
+}
+
+.sync-close-button:hover {
+	background: var(--interactive-accent-hover);
+} 

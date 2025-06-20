@@ -1,0 +1,36 @@
+{
+	"name": "obsidotion",
+	"version": "1.0.3",
+	"description": "a simple obsidian plugin that syncs from/to obsidian/notion",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"deploy": "node deploy.config.js",
+		"deploy:watch": "node deploy.config.js watch",
+		"setup": "node setup-vault.js",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^16.11.6",
+		"@types/yaml-front-matter": "^4.1.3",
+		"@typescript-eslint/eslint-plugin": "5.29.0",
+		"@typescript-eslint/parser": "5.29.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.17.3",
+		"obsidian": "latest",
+		"tslib": "2.4.0",
+		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"@notionhq/client": "^2.2.15",
+		"@tryfabric/martian": "^1.2.4",
+		"dotenv": "^16.5.0",
+		"yaml": "^2.4.2",
+		"yaml-front-matter": "^4.1.1"
+	},
+	"packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
