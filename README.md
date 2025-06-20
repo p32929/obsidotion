@@ -10,14 +10,25 @@ A simple obsidian plugin that syncs from/to obsidian/notion. Works on all platfo
 
 # How to use
 1. Star the repo :P
-2. Install the plugin
+2. Install the plugin (see installation methods below)
 3. Follow this instruction: https://github.com/EasyChris/obsidian-to-notion/?tab=readme-ov-file#how-to-use
 
 After that you can:
 1. Upload the whole vault to notion ( replaces remote data if already exists )
 2. Download the whole notion database to obsidian ( replaces local file if already exists )
 
-# How to install manually
+# How to install
+
+## Method 1: Download from releases (easiest)
+1. Go to [Releases](https://github.com/p32929/obsidotion/releases)
+2. Download `obsidotion-plugin.zip` from the latest release
+3. Extract the zip file
+4. Copy the extracted folder to `your_obsidian_vault/.obsidian/plugins/obsidotion`
+5. Open obsidian and enable the plugin
+
+## Method 2: Manual build
+
+
 1. Star the repo :P
 2. Clone the repo inside `your_obsidian_vault/.obsidian/plugins`
 3. Go to the folder
