@@ -37,6 +37,10 @@ jobs:
         cp manifest.json obsidotion-plugin/
         cp styles.css obsidotion-plugin/
         
+    - name: Get version from package.json
+      id: package-version
+      run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+      
     - name: Create zip
       run: cd obsidotion-plugin && zip -r ../obsidotion-plugin.zip . && cd ..
       
@@ -49,8 +53,8 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ github.run_number }}
-        name: Release v${{ github.run_number }}
+        tag_name: v${{ steps.package-version.outputs.version }}
+        name: Release v${{ steps.package-version.outputs.version }}
         files: obsidotion-plugin.zip
         draft: false
         prerelease: false
