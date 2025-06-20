@@ -22,7 +22,8 @@ const deployPlugin = {
 					const { deployToVault } = await import('./deploy.config.js');
 					deployToVault();
 				} catch (error) {
-					console.log('⚠️  Deployment skipped:', error.message);
+					console.log('⚠️  Auto-deployment skipped:', error.message);
+					console.log('💡 Build completed successfully - files available in project root');
 				}
 			}
 		});
@@ -61,12 +62,16 @@ const context = await esbuild.context({
 
 if (prod) {
 	await context.rebuild();
-	// Deploy for production builds too
+	console.log('✅ Build completed successfully!');
+	console.log('📦 Files generated: main.js, manifest.json, styles.css');
+	
+	// Deploy for production builds too (optional)
 	try {
 		const { deployToVault } = await import('./deploy.config.js');
 		deployToVault();
 	} catch (error) {
-		console.log('⚠️  Production deployment skipped:', error.message);
+		console.log('⚠️  Auto-deployment skipped:', error.message);
+		console.log('💡 Files are ready for manual installation');
 	}
 	process.exit(0);
 } else {

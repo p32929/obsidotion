@@ -20,9 +20,8 @@ const config = {
 
 function deployToVault() {
   if (!config.vaultPath) {
-    console.log('❌ OBSIDIAN_VAULT_PATH environment variable is not set!');
-    console.log('💡 Please create a .env file or set the environment variable.');
-    console.log('💡 See env.example for reference.');
+    console.log('⚠️  OBSIDIAN_VAULT_PATH not set - skipping deployment');
+    console.log('💡 To enable auto-deployment, create a .env file with OBSIDIAN_VAULT_PATH');
     return;
   }
   
