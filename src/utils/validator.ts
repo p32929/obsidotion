@@ -23,24 +23,21 @@ export class Validator {
 	}
 
 	static isValidNotionPage(page: any): boolean {
-		return page && 
-			   page.id && 
-			   page.properties && 
-			   page.properties.Name && 
-			   page.properties.Name.title && 
-			   Array.isArray(page.properties.Name.title);
+		return !!page && !!page.id && !!page.properties &&
+			Object.values(page.properties).some((prop: any) => prop?.type === 'title' || Array.isArray(prop?.title));
 	}
 
 	static validateFilePath(filePath: string): boolean {
 		// Check for invalid characters and ensure it's a markdown file
-		const invalidChars = /[<>:"|?*]/;
-		return !invalidChars.test(filePath) && filePath.endsWith('.md');
+		const invalidChars = /[<>:"|?*\\]/;
+		return !invalidChars.test(filePath) && filePath.endsWith('.md') &&
+			!filePath.startsWith('/') && !filePath.split('/').some(part => part === '..' || part === '');
 	}
 
 	static sanitizeFileName(fileName: string): string {
 		// Remove or replace invalid characters
 		return fileName
-			.replace(/[<>:"|?*]/g, '_')
+			.replace(/[<>:"|?*\\/#^[\]]/g, '_')
 			.replace(/\s+/g, ' ')
 			.trim();
 	}

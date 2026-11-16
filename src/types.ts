@@ -1,49 +1,27 @@
 export interface PluginSettings {
 	notionAPIToken: string;
 	databaseID: string;
+	/** Notion pages this plugin created or pulled for this vault. Only these are ever archived. */
+	ownedPageIds: string[];
 }
 
 export interface NotionPage {
 	id: string;
-	properties: {
-		Name: {
-			title: Array<{
-				text: {
-					content: string;
-				};
-			}>;
-		};
-		Tags?: {
-			multi_select: Array<{
-				name: string;
-			}>;
-		};
-	};
+	archived?: boolean;
+	properties: Record<string, any>;
 }
 
 export interface NotionBlock {
 	id: string;
 	type: string;
 	has_children: boolean;
+	/** Child blocks, filled in by NotionAPIService.getPageBlocks. */
+	children?: NotionBlock[];
 	[key: string]: any;
-}
-
-export interface SyncResult {
-	success: boolean;
-	fileName: string;
-	error?: string;
-	notionId?: string;
-	operation: 'create' | 'update' | 'download';
-}
-
-export interface SyncStats {
-	totalFiles: number;
-	successful: number;
-	failed: number;
-	errors: string[];
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
 	notionAPIToken: '',
 	databaseID: '',
-}; 
+	ownedPageIds: [],
+};

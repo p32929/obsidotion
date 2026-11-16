@@ -6,8 +6,8 @@ export class Logger {
 
 	constructor(prefix: string) {
 		this.prefix = prefix;
-		// Check environment variable to disable logging completely
-		this.loggingEnabled = process.env.DISABLE_LOGS !== 'true';
+		// DISABLE_LOGS=true turns logging off. `process` does not exist on Obsidian mobile, so check first.
+		this.loggingEnabled = typeof process === 'undefined' || process.env?.DISABLE_LOGS !== 'true';
 	}
 
 	private log(level: string, message: string, data?: any) {

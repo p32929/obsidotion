@@ -8,12 +8,16 @@ export class NotionAPIService {
 	private apiVersion: string = '2022-06-28';
 	private baseUrl: string = 'https://api.notion.com/v1';
 	private logger: Logger;
-	private rateLimitDelay: number = 100; // ms between requests
 
 	constructor(apiToken: string, logger: Logger) {
 		this.apiToken = apiToken;
 		this.logger = logger;
 	}
+
+	/** Wait between requests. Notion allows about 3 requests per second. */
+	static rateLimitDelay = 350;
+	/** Notion accepts at most 100 child blocks per request. */
+	static readonly MAX_BLOCKS_PER_REQUEST = 100;
 
 	private async makeRequest(url: string, method: 'GET' | 'POST' | 'PATCH' | 'DELETE', body?: any) {
 		const headers = {
@@ -22,58 +26,35 @@ export class NotionAPIService {
 			'Content-Type': 'application/json',
 		};
 
-		try {
-			// Add small delay to respect rate limits
-			await new Promise(resolve => setTimeout(resolve, this.rateLimitDelay));
+		for (let attempt = 0; ; attempt++) {
+			await new Promise(resolve => setTimeout(resolve, NotionAPIService.rateLimitDelay));
 
+			// throw: false so we can read Notion's error message instead of a generic one.
 			const response = await requestUrl({
 				url,
 				method,
 				headers,
 				body: body ? JSON.stringify(body) : undefined,
+				throw: false,
 			});
 
-			// Check for error status codes
+			// Rate limited: wait as long as Notion asks, then try again (a few times).
+			if (response.status === 429 && attempt < 3) {
+				const header = response.headers?.['retry-after'] ?? response.headers?.['Retry-After'];
+				const retryAfter = header !== undefined && Number.isFinite(Number(header)) ? Number(header) : 1;
+				await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+				continue;
+			}
+
 			if (response.status >= 400) {
-				let errorMessage = 'Unknown error';
-				let errorDetails: any = {};
-				
-				// Log the raw response for debugging
-				this.logger.error(`Raw error response:`, {
-					status: response.status,
-					headers: response.headers,
-					text: response.text,
-					json: response.json,
-					arrayBuffer: response.arrayBuffer
-				});
-				
+				let message = `HTTP ${response.status}`;
 				try {
-					// Parse the error response - try different methods
-					if (response.json) {
-						errorDetails = response.json;
-						errorMessage = errorDetails.message || errorDetails.object || 'API Error';
-					} else if (response.text) {
-						// Try to parse text as JSON
-						try {
-							errorDetails = JSON.parse(response.text);
-							errorMessage = errorDetails.message || errorDetails.object || 'API Error';
-						} catch (textParseError) {
-							errorMessage = response.text;
-						}
-					}
-					
-					// Log full error details
-					this.logger.error(`Notion API Error Details:`, {
-						status: response.status,
-						message: errorMessage,
-						code: errorDetails.code,
-						details: errorDetails
-					});
-				} catch (parseError) {
-					this.logger.error(`Could not parse error response:`, parseError);
+					message = response.json?.message || response.text || message;
+				} catch {
+					// body was not JSON
 				}
-				
-				throw new Error(`Request failed, status ${response.status}: ${errorMessage}`);
+				this.logger.warn(`Notion API ${method} ${url} failed: ${message}`);
+				throw new Error(`Notion: ${message}`);
 			}
 
 			if (!Validator.isValidNotionResponse(response)) {
@@ -81,10 +62,20 @@ export class NotionAPIService {
 			}
 
 			return response;
-		} catch (error) {
-			this.logger.error(`API request failed: ${method} ${url}`, error);
-			throw error;
 		}
+	}
+
+	/** The title text of a database page, whatever its title property is called. */
+	static getPageTitle(page: NotionPage): string {
+		const titleProp: any = Object.values(page.properties || {})
+			.find((prop: any) => prop?.type === 'title' || Array.isArray(prop?.title));
+		return (titleProp?.title || []).map((t: any) => t.plain_text ?? t.text?.content ?? '').join('');
+	}
+
+	private titleProperties(schema: any, title: string): any {
+		const name = Object.entries(schema?.properties || {})
+			.find(([, prop]: [string, any]) => prop.type === 'title')?.[0] || 'Name';
+		return { [name]: { title: [{ text: { content: title } }] } };
 	}
 
 	async createPage(databaseId: string, title: string, blocks: any[]): Promise<string> {
@@ -96,41 +87,22 @@ export class NotionAPIService {
 			this.logger.warn('Could not fetch database schema, proceeding with default properties');
 		}
 
-		// Build properties object based on available schema
-		const properties: any = {};
-		
-		// Handle title property
-		if (schema?.properties?.Name?.type === 'title') {
-			properties.Name = { title: [{ text: { content: title } }] };
-		} else if (schema?.properties?.Title?.type === 'title') {
-			properties.Title = { title: [{ text: { content: title } }] };
-		} else {
-			// Find the title property dynamically
-			const titleProperty = Object.entries(schema?.properties || {})
-				.find(([name, prop]: [string, any]) => prop.type === 'title');
-			
-			if (titleProperty) {
-				const [titlePropName] = titleProperty;
-				properties[titlePropName] = { title: [{ text: { content: title } }] };
-			} else {
-				// Fallback
-				properties.Name = { title: [{ text: { content: title } }] };
-			}
-		}
+		const properties = this.titleProperties(schema, title);
 
 		const body = {
 			parent: { database_id: databaseId },
 			properties,
-			children: blocks,
+			children: blocks.slice(0, NotionAPIService.MAX_BLOCKS_PER_REQUEST),
 		};
 
 		const response = await this.makeRequest(`${this.baseUrl}/pages`, 'POST', body);
-		
-		if (response.status === 200 && response.json?.id) {
-			return response.json.id;
-		} else {
+		const pageId = response.json?.id;
+		if (!pageId) {
 			throw new Error(`Failed to create page: ${response.status}`);
 		}
+		// The rest of a long note goes in separate requests.
+		await this.appendBlocks(pageId, blocks.slice(NotionAPIService.MAX_BLOCKS_PER_REQUEST));
+		return pageId;
 	}
 
 	async updatePage(pageId: string, title: string): Promise<void> {
@@ -147,25 +119,7 @@ export class NotionAPIService {
 			this.logger.warn('Could not fetch schema for update, using defaults');
 		}
 
-		const properties: any = {};
-		
-		// Handle title property
-		if (schema?.properties?.Name?.type === 'title') {
-			properties.Name = { title: [{ text: { content: title } }] };
-		} else if (schema?.properties?.Title?.type === 'title') {
-			properties.Title = { title: [{ text: { content: title } }] };
-		} else {
-			// Find the title property dynamically or fallback
-			const titleProperty = Object.entries(schema?.properties || {})
-				.find(([name, prop]: [string, any]) => prop.type === 'title');
-			
-			if (titleProperty) {
-				const [titlePropName] = titleProperty;
-				properties[titlePropName] = { title: [{ text: { content: title } }] };
-			} else {
-				properties.Name = { title: [{ text: { content: title } }] };
-			}
-		}
+		const properties = this.titleProperties(schema, title);
 
 		const body = { properties };
 
@@ -176,7 +130,8 @@ export class NotionAPIService {
 		}
 	}
 
-	async getPageBlocks(pageId: string): Promise<NotionBlock[]> {
+	/** All blocks of a page. With deep = true, nested blocks (sub-lists, table rows) are put in block.children. */
+	async getPageBlocks(pageId: string, deep: boolean = true): Promise<NotionBlock[]> {
 		let allBlocks: NotionBlock[] = [];
 		let cursor: string | undefined = undefined;
 
@@ -192,6 +147,14 @@ export class NotionAPIService {
 			}
 		} while (cursor);
 
+		if (deep) {
+			for (const block of allBlocks) {
+				if (block.has_children && block.type !== 'child_page' && block.type !== 'child_database') {
+					block.children = await this.getPageBlocks(block.id, true);
+				}
+			}
+		}
+
 		return allBlocks;
 	}
 
@@ -204,8 +167,7 @@ export class NotionAPIService {
 	}
 
 	async appendBlocks(parentId: string, blocks: any[]): Promise<void> {
-		// Append blocks in smaller batches to avoid API limits
-		const batchSize = 10;
+		const batchSize = NotionAPIService.MAX_BLOCKS_PER_REQUEST;
 		
 		for (let i = 0; i < blocks.length; i += batchSize) {
 			const batch = blocks.slice(i, i + batchSize);
@@ -220,8 +182,8 @@ export class NotionAPIService {
 	}
 
 	async clearPageBlocks(pageId: string): Promise<void> {
-		const blocks = await this.getPageBlocks(pageId);
-		
+		const blocks = await this.getPageBlocks(pageId, false);
+
 		// Delete blocks in reverse order to avoid reference issues
 		for (const block of blocks.reverse()) {
 			await this.deleteBlock(block.id);

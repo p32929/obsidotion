@@ -1,6 +1,9 @@
 import { markdownToBlocks } from '@tryfabric/martian';
+import { Document, parseDocument } from 'yaml';
 import { NotionBlock } from '../types';
 import { Logger } from '../utils/logger';
+
+const LIST_TYPES = ['bulleted_list_item', 'numbered_list_item', 'to_do'];
 
 export class MarkdownConverter {
 	private logger: Logger;
@@ -10,228 +13,161 @@ export class MarkdownConverter {
 	}
 
 	/**
-	 * Convert markdown content to Notion blocks
+	 * Convert markdown content to Notion blocks.
+	 * Long text is split into pieces of at most 2000 characters (Notion's limit).
 	 */
 	markdownToNotionBlocks(markdown: string): any[] {
 		try {
-			this.logger.debug('Converting markdown to blocks, content preview:', markdown.substring(0, 200) + '...');
-			const blocks = markdownToBlocks(markdown);
-			this.logger.debug('Converted markdown to blocks', { 
-				blockCount: blocks.length,
-				firstFewBlockTypes: blocks.slice(0, 3).map(b => b.type)
-			});
-			
-			// Log the first block in detail for debugging
-			if (blocks.length > 0) {
-				this.logger.debug('First block details:', JSON.stringify(blocks[0], null, 2));
-			}
-			
-			return blocks;
+			return markdownToBlocks(markdown, { notionLimits: { truncate: true } });
 		} catch (error) {
 			this.logger.error('Failed to convert markdown to blocks', error);
-			// Fallback: create a simple paragraph block
-			const fallbackBlock = {
+			// Fallback: plain paragraphs, each piece within Notion's 2000 character limit.
+			const pieces = markdown.match(/[\s\S]{1,2000}/g) || [];
+			return pieces.map(piece => ({
 				object: 'block',
 				type: 'paragraph',
-				paragraph: {
-					rich_text: [{
-						type: 'text',
-						text: { content: markdown }
-					}]
-				}
-			};
-			this.logger.debug('Using fallback block:', fallbackBlock);
-			return [fallbackBlock];
+				paragraph: { rich_text: [{ type: 'text', text: { content: piece } }] },
+			}));
 		}
 	}
 
 	/**
-	 * Convert Notion blocks to markdown content
+	 * Convert Notion blocks to markdown content.
+	 * Nested blocks are read from block.children (filled in by NotionAPIService.getPageBlocks)
+	 * or from block[type].children (the shape markdownToNotionBlocks produces).
 	 */
-	async notionBlocksToMarkdown(blocks: NotionBlock[], indentLevel: number = 0, numbering: number[] = []): Promise<string> {
-		let markdown = '';
-		
-		for (const block of blocks) {
-			markdown += await this.blockToMarkdown(block, indentLevel, numbering);
-		}
-		
-		return markdown;
+	notionBlocksToMarkdown(blocks: NotionBlock[]): string {
+		const markdown = this.renderBlocks(blocks, 0);
+		return markdown ? markdown + '\n' : '';
 	}
 
-	private async blockToMarkdown(block: NotionBlock, indentLevel: number = 0, numbering: number[] = []): Promise<string> {
-		const indent = '    '.repeat(indentLevel);
-		let markdown = '';
-		const nextIndentLevel = indentLevel + 1;
+	private renderBlocks(blocks: NotionBlock[], depth: number): string {
+		let out = '';
+		let previousType = '';
+		let number = 0;
 
-		try {
-			switch (block.type) {
-				case 'paragraph':
-					markdown += indent + this.extractRichText(block.paragraph?.rich_text) + '\n';
-					break;
+		for (const block of blocks) {
+			number = block.type === 'numbered_list_item' && previousType === 'numbered_list_item' ? number + 1 : 1;
+			const markdown = this.blockToMarkdown(block, depth, number);
+			if (!markdown) continue;
 
-				case 'heading_1':
-					markdown += `# ${this.extractRichText(block.heading_1?.rich_text)}\n`;
-					break;
-
-				case 'heading_2':
-					markdown += `## ${this.extractRichText(block.heading_2?.rich_text)}\n`;
-					break;
-
-				case 'heading_3':
-					markdown += `### ${this.extractRichText(block.heading_3?.rich_text)}\n`;
-					break;
-
-				case 'bulleted_list_item':
-					markdown += `${indent}- ${this.extractRichText(block.bulleted_list_item?.rich_text)}\n`;
-					if (block.has_children) {
-						// Note: In a real implementation, you'd need to fetch child blocks
-						// This is a placeholder for child block handling
-						this.logger.debug('Block has children that need to be fetched', { blockId: block.id });
-					}
-					break;
-
-				case 'numbered_list_item':
-					const currentNumber = numbering[indentLevel] || 1;
-					markdown += `${indent}${currentNumber}. ${this.extractRichText(block.numbered_list_item?.rich_text)}\n`;
-					numbering[indentLevel] = currentNumber + 1;
-					if (block.has_children) {
-						this.logger.debug('Numbered list block has children that need to be fetched', { blockId: block.id });
-					}
-					break;
-
-				case 'code':
-					const language = block.code?.language || '';
-					const codeContent = this.extractRichText(block.code?.rich_text);
-					markdown += `\`\`\`${language}\n${codeContent}\n\`\`\`\n`;
-					break;
-
-				case 'quote':
-					markdown += `> ${this.extractRichText(block.quote?.rich_text)}\n`;
-					break;
-
-				case 'divider':
-					markdown += '---\n';
-					break;
-
-				case 'table':
-					markdown += this.convertTableToMarkdown(block) + '\n';
-					break;
-
-				case 'image':
-					const imageUrl = block.image?.file?.url || block.image?.external?.url;
-					const caption = this.extractRichText(block.image?.caption);
-					if (imageUrl) {
-						markdown += `![${caption}](${imageUrl})\n`;
-					}
-					break;
-
-				case 'to_do':
-					const checked = block.to_do?.checked ? '[x]' : '[ ]';
-					markdown += `${indent}- ${checked} ${this.extractRichText(block.to_do?.rich_text)}\n`;
-					break;
-
-				default:
-					this.logger.warn(`Unhandled block type: ${block.type}`, block);
-					// Fallback: try to extract any rich text content
-					const fallbackText = this.extractAnyRichText(block);
-					if (fallbackText) {
-						markdown += `${indent}${fallbackText}\n`;
-					}
-			}
-		} catch (error) {
-			this.logger.error(`Error converting block to markdown`, { blockType: block.type, error });
-			markdown += `${indent}[Error converting block of type: ${block.type}]\n`;
+			// List items stay together; everything else is separated by an empty line.
+			const tight = LIST_TYPES.includes(block.type) && block.type === previousType;
+			out += out ? (tight ? '\n' : '\n\n') + markdown : markdown;
+			previousType = block.type;
 		}
 
-		return markdown;
+		return out;
+	}
+
+	private childrenOf(block: NotionBlock): NotionBlock[] {
+		return block.children || block[block.type]?.children || [];
+	}
+
+	private blockToMarkdown(block: NotionBlock, depth: number, number: number): string {
+		const indent = '    '.repeat(depth);
+		const data = block[block.type] || {};
+		const text = this.extractRichText(data.rich_text);
+		const children = this.childrenOf(block);
+		const nested = children.length ? '\n' + this.renderBlocks(children, depth + 1) : '';
+
+		switch (block.type) {
+			case 'paragraph':
+				return indent + text + nested;
+			case 'heading_1':
+				return `# ${text}`;
+			case 'heading_2':
+				return `## ${text}`;
+			case 'heading_3':
+				return `### ${text}`;
+			case 'bulleted_list_item':
+				return `${indent}- ${text}${nested}`;
+			case 'numbered_list_item':
+				return `${indent}${number}. ${text}${nested}`;
+			case 'to_do':
+				return `${indent}- [${data.checked ? 'x' : ' '}] ${text}${nested}`;
+			case 'code': {
+				const language = data.language && data.language !== 'plain text' ? data.language : '';
+				const code = (data.rich_text || []).map((t: any) => t.text?.content ?? t.plain_text ?? '').join('');
+				return '```' + language + '\n' + code + '\n```';
+			}
+			case 'quote': {
+				// Text can be in the quote itself (Notion) or in paragraphs inside it (markdownToNotionBlocks).
+				const quoted = [text, children.length ? this.renderBlocks(children, 0) : ''].filter(Boolean).join('\n\n');
+				return quoted.split('\n').map(line => (line ? `> ${line}` : '>')).join('\n');
+			}
+			case 'divider':
+				return '---';
+			case 'table':
+				return this.tableToMarkdown(children);
+			case 'image': {
+				const url = data.file?.url || data.external?.url;
+				return url ? `![${this.extractRichText(data.caption)}](${url})` : '';
+			}
+			default: {
+				this.logger.warn(`Unhandled block type: ${block.type}`);
+				return text ? indent + text + nested : nested.trim();
+			}
+		}
+	}
+
+	private tableToMarkdown(rows: NotionBlock[]): string {
+		const cells = rows
+			.filter(row => row.type === 'table_row')
+			.map(row => (row.table_row?.cells || []).map((cell: any[]) => this.extractRichText(cell).replace(/\|/g, '\\|')));
+		if (!cells.length) return '';
+		const line = (row: string[]) => `| ${row.join(' | ')} |`;
+		const header = line(cells[0]);
+		const separator = line(cells[0].map(() => '---'));
+		return [header, separator, ...cells.slice(1).map(line)].join('\n');
 	}
 
 	private extractRichText(richTextArray?: any[]): string {
-		if (!richTextArray || !Array.isArray(richTextArray)) {
+		if (!Array.isArray(richTextArray)) {
 			return '';
 		}
 
 		return richTextArray.map(item => {
-			let text = item.text?.content || '';
-			
-			// Apply formatting
+			let text = item.text?.content ?? item.plain_text ?? '';
+			if (!text) return '';
+
+			if (item.annotations?.code) text = `\`${text}\``;
 			if (item.annotations?.bold) text = `**${text}**`;
 			if (item.annotations?.italic) text = `*${text}*`;
-			if (item.annotations?.code) text = `\`${text}\``;
 			if (item.annotations?.strikethrough) text = `~~${text}~~`;
-			
-			// Handle links
-			if (item.text?.link?.url) {
-				text = `[${text}](${item.text.link.url})`;
-			}
-			
+
+			const url = item.text?.link?.url || item.href;
+			if (url) text = `[${text}](${url})`;
+
 			return text;
 		}).join('');
 	}
 
-	private extractAnyRichText(block: any): string {
-		// Try to find rich text in any property of the block
-		for (const [key, value] of Object.entries(block)) {
-			if (value && typeof value === 'object' && (value as any).rich_text) {
-				return this.extractRichText((value as any).rich_text);
-			}
-		}
-		return '';
-	}
-
-	private convertTableToMarkdown(block: any): string {
-		try {
-			if (!block.table) return '';
-
-			// This is a simplified table conversion
-			// In practice, you'd need to fetch table row children
-			this.logger.debug('Table block detected, but full table conversion requires child block fetching');
-			return '| Table content needs to be fetched from child blocks |\n|---|\n';
-		} catch (error) {
-			this.logger.error('Error converting table to markdown', error);
-			return '[Table conversion error]\n';
-		}
-	}
-
 	/**
-	 * Extract frontmatter and content from markdown
+	 * Split a note into its frontmatter and body.
+	 * The frontmatter is a YAML Document, so comments and order survive when it is written back.
 	 */
-	parseMarkdownWithFrontmatter(markdown: string): { frontmatter: any; content: string } {
-		const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/;
-		const match = markdown.match(frontmatterRegex);
+	parseMarkdownWithFrontmatter(markdown: string): { frontmatter: any; content: string; doc: Document } {
+		const match = markdown.match(/^---\r?\n(?:([\s\S]*?)\r?\n)?---[ \t]*(?:\r?\n|$)([\s\S]*)$/);
 
 		if (match) {
-			try {
-				// Simple YAML parsing - in production you'd use a proper YAML parser
-				const frontmatter = this.parseSimpleYaml(match[1]);
-				return { frontmatter, content: match[2] };
-			} catch (error) {
-				this.logger.warn('Failed to parse frontmatter, treating as regular markdown', error);
+			const doc = parseDocument(match[1] ?? '');
+			const frontmatter = doc.toJS() ?? {};
+			if (doc.errors.length === 0 && typeof frontmatter === 'object' && !Array.isArray(frontmatter)) {
+				if (!doc.contents) doc.contents = doc.createNode({}) as any;
+				return { frontmatter, content: match[2], doc };
 			}
+			this.logger.warn('Could not read the frontmatter, treating the note as plain markdown');
 		}
 
-		return { frontmatter: {}, content: markdown };
+		return { frontmatter: {}, content: markdown, doc: new Document({}) };
 	}
 
-	private parseSimpleYaml(yamlString: string): any {
-		const result: any = {};
-		const lines = yamlString.split('\n');
-
-		for (const line of lines) {
-			const trimmed = line.trim();
-			if (trimmed && trimmed.includes(':')) {
-				const [key, ...valueParts] = trimmed.split(':');
-				const value = valueParts.join(':').trim();
-				
-				// Handle arrays (simple case)
-				if (value.startsWith('[') && value.endsWith(']')) {
-					result[key.trim()] = value.slice(1, -1).split(',').map(v => v.trim().replace(/['"]/g, ''));
-				} else {
-					result[key.trim()] = value.replace(/['"]/g, '');
-				}
-			}
+	/** Put frontmatter values (written by this plugin) and the body back together. */
+	buildNote(doc: Document, values: Record<string, string>, content: string): string {
+		for (const [key, value] of Object.entries(values)) {
+			doc.set(key, value);
 		}
-
-		return result;
+		return `---\n${String(doc)}---\n${content}`;
 	}
-} 
+}

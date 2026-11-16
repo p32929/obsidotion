@@ -1,53 +1,55 @@
 # obsidotion
-A simple obsidian plugin that syncs from/to obsidian/notion. Works on all platforms
+
+Sync your Obsidian notes with a Notion database. Upload your notes to Notion with one click, and pull the changes you make in Notion back into Obsidian. Works on desktop and mobile.
 
 # Screenshots
-### From windows
+### From Windows
 ![Screenshot (77)](https://github.com/p32929/obsidotion/assets/6418354/95243ab8-58a4-4359-a72e-7d501c14f822)
 
 ### From Android
 ![Screenshot_20240525-161914_Obsidian](https://github.com/p32929/obsidotion/assets/6418354/7639a491-ce9c-4986-a7df-64d8f636f2df)
 
-# How to use
-1. Star the repo :P
-2. Install the plugin (see installation methods below)
-3. Follow this instruction: https://github.com/EasyChris/obsidian-to-notion/?tab=readme-ov-file#how-to-use
+# Set up Notion
 
-After that you can:
-1. Upload the whole vault to notion ( replaces remote data if already exists )
-2. Download the whole notion database to obsidian ( replaces local file if already exists )
+You do this once. It gives the plugin a key to your Notion and a database to put your notes in.
 
-# How to install
+1. Open [notion.so/my-integrations](https://www.notion.so/my-integrations) and click **New integration**.
+2. Give it a name (for example `Obsidian`), pick your workspace, and save.
+3. Copy the **Internal Integration Secret**. It starts with `ntn_` or `secret_`. This is your **token**.
+4. In Notion, create a new page and choose **Table** to make a database. Keep its first column, **Name**: that is where note titles go.
+5. On the database page, click **•••** (top right), then **Connections**, then add the integration you made in step 2. Without this, the plugin cannot see the database.
+6. Copy the database link (**•••**, then **Copy link**). The **database ID** is the 32 characters before the `?`. For example, in `https://www.notion.so/myname/8f3a1c2b9d4e4f6a8b7c6d5e4f3a2b1c?v=1234` the ID is `8f3a1c2b9d4e4f6a8b7c6d5e4f3a2b1c`.
 
-## Method 1: Download from releases (easiest)
-1. Go to [Releases](https://github.com/p32929/obsidotion/releases)
-2. Download `obsidotion-plugin.zip` from the latest release
-3. Extract the zip file
-4. Copy the extracted folder to `your_obsidian_vault/.obsidian/plugins/obsidotion`
-5. Open obsidian and enable the plugin
+# Install the plugin
 
-## Method 2: Manual build
+1. Open the [latest release](https://github.com/p32929/obsidotion/releases/latest) and download `obsidotion-plugin.zip`.
+2. In your vault, open the folder `.obsidian/plugins` (show hidden files if you cannot see `.obsidian`). Make a new folder in it called `obsidotion`.
+3. Unzip the file and put `main.js`, `manifest.json` and `styles.css` inside that `obsidotion` folder.
+4. Open Obsidian, go to **Settings**, then **Community plugins**, and turn on **obsidotion**. (If Obsidian asks, turn off Restricted mode first.)
+5. Open the plugin's settings and paste your **token** and **database ID**.
 
+# Use it
 
-1. Star the repo :P
-2. Clone the repo inside `your_obsidian_vault/.obsidian/plugins`
-3. Go to the folder
-4. Run `npm install` or `yarn`
-5. Run `npm run build` or `yarn build`
-6. Open obsidian
-7. Enable the plugin
+1. **Upload:** click the **cloud with an up arrow** in the left ribbon (or run "Upload to Notion" from the command palette). Each note becomes a page in your database. The next time, only notes you changed, added or renamed are uploaded.
+2. **Pull:** click the **cloud with a down arrow** (or run "Pull from Notion"). Notes whose page you changed in Notion get the Notion version, and new pages you made in Notion are added as notes (in a `Notion` folder, or back in their old folder if obsidotion uploaded them before). It asks you once before it changes anything.
+3. The plugin adds a few lines to the top of each synced note (`notionID`, `link`, `lastSync`, `filePath`, `contentHash`, `notionHash`). Leave them there: that is how it remembers which page belongs to which note. Your own frontmatter, like tags, stays as it is.
+4. When you delete a note and upload again, its Notion page is archived (you can restore it from Notion's Trash).
+5. It never archives pages it did not make or pull itself, so other pages in the database are safe. If a note cannot be read during an upload, nothing is archived that time.
 
-## For developers who dont want to copy files manually every time
+# Good to know
 
-You can create a `.env` file to auto-copy the built files to your obsidian vault. This way you dont have to manually copy `main.js`, `manifest.json`, `styles.css` every time you build.
+1. Sync only happens when you click Upload or Pull. Nothing runs in the background.
+2. Pull replaces the text of a note with the Notion version. If you changed the same note in both places, the last action wins, so upload or pull right after you finish editing.
+3. Supported: headings, paragraphs, bold, italic, code, strikethrough, links, bullet lists (also nested), numbered lists, checkboxes, quotes, code blocks, tables and images with a web link. Horizontal lines (`---`) and Obsidian-only things like `[[wiki links]]` and embeds are sent as plain text or left out.
+4. Notion allows about 3 requests a second, so the first upload of a big vault takes a while. Long notes are sent in parts, so there is no size limit you need to think about.
+5. Notes synced with version 1.0 keep working. The first pull after updating only records the current state of each page and does not change the text of your existing notes.
 
-Create a `.env` file:
-```
-OBSIDIAN_VAULT_PATH=/path/to/your/obsidian/vault/.obsidian/plugins
-PLUGIN_ID=obsidotion
-```
+# Build it yourself
 
-If you dont provide the `.env` file, the build will still work fine. You'll just have to copy the files manually
+1. Clone this repo and run `npm install`.
+2. Run `npm run build` to make `main.js`, or `npm run dev` to rebuild on every change.
+3. Run `npm test` to run the tests (they use a fake Notion, no account needed).
+4. Optional: create a `.env` file with `OBSIDIAN_VAULT_PATH=/path/to/vault/.obsidian/plugins` and `PLUGIN_ID=obsidotion`, and every build is copied into your vault.
 
 # License
 
